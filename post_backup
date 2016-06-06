@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use Time::Piece;
+my $backup_dir = "/backup";
+my @search_dir;
+my @dates;
+my $retain_local = 2;
+push @search_dir, $backup_dir;
+push @search_dir, "$backup_dir/weekly" if -d "$backup_dir/weekly";
+push @search_dir, "$backup_dir/monthly" if -d "$backup_dir/monthly";
+foreach my $directory (@search_dir){
+    opendir (DIR, $directory) or print $!;
+    while (my $file = readdir(DIR)) {
+        push @dates, $file if $file =~ /[0-9]{4}-[0-9]{1,2}-[0-9]{0,2}/;
+    }
+    closedir(DIR);
+}
+my @sorted = sort {
+    Time::Piece->strptime($a, '%Y-%m-%d') <=> Time::Piece->strptime($b, '%Y-%m-%d')
+} @dates;
+for (1 .. $retain_local) {
+    pop @sorted;
+}
+foreach my $rm_dir (@sorted) {
+    foreach my $dir (@search_dir) {
+        print "$dir/$rm_dir\n" if -d "$dir/$rm_dir";
+        #system("rm -rf $dir/$rm_dir") if -d "$dir/$rm_dir";
+    }
+}
+exit;
